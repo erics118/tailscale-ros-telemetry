@@ -1,6 +1,7 @@
 {
     "keyType": "auth",
     "description": "device creation key",
+    "expirySeconds": 1440,
     "capabilities": {
         "devices": {
             "create": {
