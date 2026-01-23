@@ -16,12 +16,12 @@
                 <initialPeersList>
                     <locator>
                         <udpv4>
-                            <address>100.94.136.98</address>
+                            <address>100.92.193.1</address>
                         </udpv4>
                     </locator>
                     <locator>
                         <udpv4>
-                            <address>100.115.170.127</address> 
+                            <address>100.86.142.66</address> 
                         </udpv4>
                     </locator>
                 </initialPeersList>
