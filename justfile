@@ -15,9 +15,6 @@ env_api_key := env('API_KEY')
 hostname := shell("hostname")
 date := shell("date +%s")
 
-# api key for the tailnet
-# api_key := env('API_KEY')
-
 # when creating a device:
 # suppose we are on the new device
 # we are given the oauth client id/secret
@@ -68,8 +65,8 @@ default:
 [group("client")]
 @generate-api-key:
     curl -s "https://api.tailscale.com/api/v2/oauth/token" \
-        -d "client_id=${OAUTH_CLIENT_ID}" \
-        -d "client_secret=${OAUTH_CLIENT_SECRET}" \
+        -d "client_id={{oauth_client_id}}" \
+        -d "client_secret={{oauth_client_secret}}" \
             | jq
 
 # lists all devices
@@ -129,3 +126,8 @@ default:
         --header "Authorization: Bearer {{api_key}}" \
         | jq
 
+# checks an auth key
+[group("api")]
+@check-key auth_key_id api_key=env_api_key :
+    curl "https://api.tailscale.com/api/v2/tailnet/-/keys/{{auth_key_id}}" \
+        --header "Authorization: Bearer {{api_key}}"
