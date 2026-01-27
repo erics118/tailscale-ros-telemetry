@@ -26,16 +26,18 @@ date := shell("date +%s")
 # the auth key can also have a short lifetime?
 
 # we need to implement checks to make sure these env vars are set
+
+[private]
+default:
+    @just --list --unsorted
+
+[private]
 full:
     API_KEY=$(just generate-api-key | jq -r '.access_token') \
     && echo $API_KEY \
     && AUTH_KEY=$(just generate-auth-key $API_KEY | jq -r '.key') \
     && echo $AUTH_KEY \
     && sudo tailscale up --auth-key=$AUTH_KEY --hostname="$(hostname)-$(date +%s)"
-
-[private]
-default:
-    @just --list --unsorted
 
 # run an ephemeral tailscale docker container, ie to create a device
 [group("docker")]
