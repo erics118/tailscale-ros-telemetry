@@ -16,12 +16,22 @@
                 <initialPeersList>
                     <locator>
                         <udpv4>
-                            <address>100.92.193.1</address>
+                            <address>squid</address>
                         </udpv4>
                     </locator>
                     <locator>
                         <udpv4>
-                            <address>100.86.142.66</address> 
+                            <address>nixos-vm</address> 
+                        </udpv4>
+                    </locator>
+                    <locator>
+                        <udpv4>
+                            <address>mercury</address> 
+                        </udpv4>
+                    </locator>
+                    <locator>
+                        <udpv4>
+                            <address>pukeko</address> 
                         </udpv4>
                     </locator>
                 </initialPeersList>

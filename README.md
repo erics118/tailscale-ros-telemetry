@@ -20,14 +20,6 @@ for nixos use direnv. put the content below into `.envrc` and add `use flake` to
 export OAUTH_CLIENT_ID=
 export OAUTH_CLIENT_SECRET=
 
-# TODO: remove this
-# this isn't used directly right now. just set it to anything
-export API_KEY=tmp
-
-# TODO: this isn't actually necessary
-# set this to the id of your tailnet.
-export TAILNET_NAME=
-
 # choose a domain id. must be the same across devices
 export ROS_DOMAIN_ID=14
 
@@ -37,10 +29,8 @@ export ROS_LOCALHOST_ONLY=0
 # this cannot be changed either
 export RMW_IMPLEMENTATION=rmw_fastrtps_dynamic_cpp
 
-# set this to the full path of the ./fast.xml for you
-# TODO: make it done automatically
-# TODO: is it possible for to automate populating fast.xml with values by using tailscale?
-export FASTRTPS_DEFAULT_PROFILES_FILE=/home/eric/tailscale-ros/fast.xml
+# path of the fast.xml file. this sets it automatically
+export FASTRTPS_DEFAULT_PROFILES_FILE=$(pwd)/fast.xml
 ```
 
 ## set up ros
