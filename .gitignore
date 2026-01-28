@@ -30,4 +30,6 @@ AMENT_IGNORE
 
 # direnv
 .direnv
-/.envrc
+.envrc
+.env
+

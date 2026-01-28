@@ -2,24 +2,27 @@
 
 set -euo pipefail
 
-# install necessary dependencies
-if ! command -v curl &> /dev/null; then
-    echo "'curl' not found. Installing..." >&2
-    sudo apt-get update && apt-get install -y curl || exit 1
-fi
+# install deps only on ubuntu
+if grep -qi ubuntu /etc/os-release; then
+    # install necessary dependencies
+    if ! command -v curl &> /dev/null; then
+        echo "'curl' not found. Installing..." >&2
+        sudo apt-get update && apt-get install -y curl || exit 1
+    fi
 
-if ! command -v jq &> /dev/null; then
-    echo "'jq' not found. Installing..." >&2
-    sudo apt-get update && apt-get install -y jq || exit 1
-fi
+    if ! command -v jq &> /dev/null; then
+        echo "'jq' not found. Installing..." >&2
+        sudo apt-get update && apt-get install -y jq || exit 1
+    fi
 
-if ! command -v tailscale &> /dev/null; then
-    echo "'tailscale' not found. Installing..." >&2
-    curl -fsSL https://tailscale.com/install.sh | sh || exit 1
-fi
+    if ! command -v tailscale &> /dev/null; then
+        echo "'tailscale' not found. Installing..." >&2
+        curl -fsSL https://tailscale.com/install.sh | sh || exit 1
+    fi
 
-# ensure that fastrtps is installed. it should already be though
-# sudo apt-get install ros-humble-rmw-fastrtps-cpp
+    # ensure that fastrtps is installed. it should already be though
+    sudo apt-get install ros-humble-rmw-fastrtps-dynamic-cpp
+fi
 
 generate_api_key() {
     curl -s "https://api.tailscale.com/api/v2/oauth/token" \
