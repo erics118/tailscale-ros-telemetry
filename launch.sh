@@ -119,10 +119,75 @@ stop() {
     echo "tailscale stopped and logged out"
 }
 
+generate_fast_xml() {
+    local output_file=$1
+    local status_json
+    local hostnames
+
+    status_json=$(tailscale status --json) || {
+        echo "failed to get tailscale status" >&2
+        exit 1
+    }
+
+    hostnames=$(echo "$status_json" | jq -r '([.Self.HostName] + ((.Peer // {})|to_entries|map(.value.HostName)))
+       | map(ascii_downcase)
+       | unique
+       | sort
+       | .[]')
+
+    if [ -z "$hostnames" ]; then
+        echo "no hostnames found" >&2
+        exit 1
+    fi
+
+    # build the locator entries
+    local locators=""
+    while IFS= read -r host; do
+        locators="${locators}                    <locator>
+                        <udpv4>
+                            <address>${host}</address>
+                        </udpv4>
+                    </locator>
+"
+    done <<< "$hostnames"
+
+    # generate the full XML
+    local xml
+    xml='<?xml version="1.0" encoding="UTF-8" ?>
+<profiles xmlns="http://www.eprosima.com/XMLSchemas/fastRTPS_Profiles">
+    <transport_descriptors>
+        <transport_descriptor>
+            <transport_id>TailscaleTransport</transport_id>
+            <type>UDPv4</type>
+        </transport_descriptor>
+    </transport_descriptors>
+    <participant profile_name="TailscaleSimple" is_default_profile="true">
+        <rtps>
+            <userTransports>
+                <transport_id>TailscaleTransport</transport_id>
+            </userTransports>
+            <useBuiltinTransports>true</useBuiltinTransports>
+            <builtin>
+                <initialPeersList>
+'"${locators}"'                </initialPeersList>
+            </builtin>
+        </rtps>
+    </participant>
+</profiles>'
+
+    if [ -n "$output_file" ]; then
+        echo "$xml" > "$output_file"
+        echo "wrote $output_file"
+    else
+        echo "$xml"
+    fi
+}
+
 # initialize variables
 cmd=""
 install_dependencies=false
 print_keys=false
+output_file=""
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -138,6 +203,14 @@ while [ $# -gt 0 ]; do
             print_keys=true
             shift
             ;;
+        --write)
+            if [ -z "${2:-}" ]; then
+                echo "error: --write requires a filename" >&2
+                exit 1
+            fi
+            output_file=$2
+            shift 2
+            ;;
         start)
             cmd=start
             shift
@@ -148,6 +221,10 @@ while [ $# -gt 0 ]; do
             ;;
         restart)
             cmd=restart
+            shift
+            ;;
+        generate-fast-xml)
+            cmd=generate-fast-xml
             shift
             ;;
         *)
@@ -177,18 +254,27 @@ case "${cmd}" in
         stop || true
         start
         ;;
+    generate-fast-xml)
+        generate_fast_xml "$output_file"
+        ;;
     *)
         echo "Usage: $0 [options] <command>"
         echo
         echo "Commands:"
-        echo "  start              Start tailscale with a new ephemeral device"
-        echo "  stop               Stop tailscale and logout"
-        echo "  restart            Explicitly stop and start tailscale with a new ephemeral device"
+        echo "    start                  Start tailscale with a new ephemeral device"
+        echo "        --print-keys       Print generated API and Auth keys to stdout"
         echo
-        echo "Options:"
-        echo "  --install-deps     Install necessary dependencies (only on Ubuntu; curl, jq, tailscale)"
-        echo "  --print-keys       Print generated API and Auth keys to stdout (for start command)"
-        echo "  --help             Show this help message"
+        echo "    stop                   Stop tailscale and logout"
+        echo
+        echo "    restart                Explicitly stop and start tailscale with a new ephemeral device"
+        echo "        --print-keys       Print generated API and Auth keys to stdout"
+        echo
+        echo "    generate-fast-xml      Generate fast.xml from tailscale peers (outputs to stdout by default)"
+        echo "        --write <file>     Write to <file> instead of stdout"
+        echo
+        echo "Global Options:"
+        echo "    --install-deps         Install necessary dependencies (only on Ubuntu; curl, jq, tailscale)"
+        echo "    --help                 Show this help message"
         ;;
 esac
 
