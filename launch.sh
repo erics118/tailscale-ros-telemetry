@@ -50,16 +50,21 @@ generate_auth_key() {
                 "ephemeral": true,
                 "preauthorized": true,
                 "tags": [
-                    "tag:test-devices"
+                    "'"${TAILSCALE_TAG_NAME}"'"
                 ]
             } } }
         }'
 }
 
 start() {
-    # make sure the env vars are set
+    # make sure the env vars are set[]
     if [ -z "${OAUTH_CLIENT_ID:-}" ] || [ -z "${OAUTH_CLIENT_SECRET:-}" ]; then
         echo "ensure OAUTH_CLIENT_ID and OAUTH_CLIENT_SECRET environment variables are set" >&2
+        exit 1
+    fi
+
+    if [ -z "${TAILSCALE_TAG_NAME:-}" ]; then
+        echo "ensure TAILSCALE_TAG_NAME environment variable is set" >&2
         exit 1
     fi
 
@@ -114,8 +119,8 @@ start() {
 }
 
 stop() {
-    sudo tailscale down
-    sudo tailscale logout
+    sudo tailscale down || true
+    sudo tailscale logout || true
     echo "tailscale stopped and logged out"
 }
 
@@ -129,11 +134,29 @@ generate_fast_xml() {
         exit 1
     }
 
-    hostnames=$(echo "$status_json" | jq -r '([.Self.HostName] + ((.Peer // {})|to_entries|map(.value.HostName)))
-       | map(ascii_downcase)
-       | unique
-       | sort
-       | .[]')
+    if [ -z "${TAILSCALE_TAG_NAME:-}" ]; then
+        echo "no TAILSCALE_TAG_NAME env var, providing all devices" >&2
+        hostnames=$(echo "$status_json" | jq -r '([.Self.HostName] + 
+            ((.Peer // {})|to_entries|map(.value.HostName)))
+            | map(ascii_downcase)
+            | unique
+            | sort
+            | .[]')
+    else
+        echo "filtering devices by tag: ${TAILSCALE_TAG_NAME}" >&2
+        hostnames=$(echo "$status_json" | jq -r '
+            ([.Self.HostName] +
+            ((.Peer // {})
+                | to_entries
+                | map(.value
+                    | select((.Tags // []) | index("'"${TAILSCALE_TAG_NAME}"'"))
+                    | .HostName)))
+            | map(ascii_downcase)
+            | unique
+            | sort
+            | .[]
+        ')
+    fi
 
     if [ -z "$hostnames" ]; then
         echo "no hostnames found" >&2

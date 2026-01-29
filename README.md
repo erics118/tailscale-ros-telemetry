@@ -8,9 +8,9 @@ The `justfile` is just for development purposes.
 requires `curl`, `jq`, and `tailscale` to be installed on the system, but it
 will install them if they are not found.
 
-# how to use
+## how to use
 
-## configure tailscale
+### configure tailscale
 
 create a tailscale oauth app to get a client ID and secret: 
 https://tailscale.com/kb/1215/oauth-clients
@@ -19,13 +19,13 @@ Then, create a tag for the devices to use. This repo uses `tag:test-devices`.
 
 TODO: when done developing, change tag to `tag:ros-devices`
 
-## configure env vars
+### configure env vars
 set up these environment variables: (or use direnv or similar)
 
-### nixos
+#### nixos
 use direnv. put the content below into `.envrc` and add `use flake` to the top of the file.
 
-### other linux
+#### other linux
 
 set the following variables:
 
@@ -33,6 +33,9 @@ set the following variables:
 # tailscale oauth client id and secret
 export OAUTH_CLIENT_ID=
 export OAUTH_CLIENT_SECRET=
+
+# the name of the tailscale tag to use
+export TAILSCALE_TAG_NAME="tag:test-devices"
 
 # choose a domain id. must be the same across devices
 export ROS_DOMAIN_ID=14
@@ -48,18 +51,16 @@ export RMW_IMPLEMENTATION=rmw_fastrtps_dynamic_cpp
 export FASTRTPS_DEFAULT_PROFILES_FILE=$(pwd)/fast.xml
 ```
 
-## set up fastrtps
+### set up fastrtps
 
-in `./fast.xml`, add in all the device ip/hostnames.
+in `./fast.xml`, add in all the (subscriber) ip/hostnames.
 this is necessary for the publisher to talk to the subscriber.
-We need to have this because tailscale doesn't support multicast,
-which ROS uses for the nodes to find each other.
-
-You can do this automatically with `./launch.sh generate-fast-xml --write fast.xml`
 
 The subscribers do not need to have this configured, only the publishers.
 
-## set up tailscale
+You can do this automatically with `./launch.sh generate-fast-xml --write fast.xml`
+
+### set up tailscale
 
 If using a `.env` file, make sure to source it first with `source .env`
 
@@ -69,11 +70,11 @@ This uses the oauth client to authenticate with tailscale to create an api key,
 which then creates an auth key, and then sets up tailscale for this device,
 using a tag to ensure the device persists.
 
-## set up ros
+### set up ros
 
 these are the standard steps.
 
-### nixos
+#### nixos
 
 the `flake.nix` sets everything up.
 
@@ -81,7 +82,7 @@ build the ros2 package with `colcon build --symlink-install`
 
 run `source install/setup.zsh`, run `nix develop`, or use direnv to automatically enter the shell.
 
-### other linux
+#### other linux
 
 install ros2 humble
 
@@ -91,14 +92,27 @@ build the ros2 package with `colcon build --symlink-install`
 
 run `source install/setup.zsh`
 
-## run ros
+### run ros
+
+`src/py_pubsub` is the tutorial publisher/subscriber code.
 
 run `ros2 run py_pubsub listener` on one device 
 and `ros2 run py_pubsub talker` on the other device.
 they should be communicating with each other.
 
+## how it works
 
-# notes
+Tailscale auth and api keys are limited to 90 day lifespans, so this script instead uses the oauth client.
+This allows the script to generate new api and auth keys on each run, allowing for long term usage without human intervention.
+
+By default, devices need to re-authenticate every 90 days.
+However, by using tags, devices will not need to re-authenticate.
+
+Tailscale does not support multicast, which ROS2 uses for nodes to find each other.
+To work around this, we generate a `fast.xml` file for fastrtps to use for communication over tailscale.
+This file contains the ips/hostnames of all the devices in the tailnet.
+
+## notes
 
 references:
 - https://danaukes.com/notebook/ros2/30-configuring-ros-over-tailscale/

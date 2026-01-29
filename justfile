@@ -5,6 +5,8 @@
 oauth_client_id := env('OAUTH_CLIENT_ID')
 oauth_client_secret := env('OAUTH_CLIENT_SECRET')
 
+tailscale_tag_name := env('TAILSCALE_TAG_NAME', 'tag:test-devices')
+
 # optional api key. if not specified, must be provided as arg to relevant recipes
 env_api_key := env('API_KEY', '')
 
@@ -34,7 +36,7 @@ full:
     && sudo tailscale logout \
     && API_KEY=$(just generate-api-key | jq -r '.access_token') \
     && echo $API_KEY \
-    && AUTH_KEY=$(just generate-auth-key $API_KEY | jq -r '.key') \
+    && AUTH_KEY=$(just generate-auth-key {{tailscale_tag_name}} $API_KEY | jq -r '.key') \
     && echo $AUTH_KEY \
     && sudo tailscale up --reset --auth-key=$AUTH_KEY --hostname="$(hostname)"
 
@@ -79,7 +81,7 @@ full:
 
 # creates an auth key
 [group("api")]
-@generate-auth-key api_key=env_api_key:
+@generate-auth-key tag_name api_key=env_api_key:
     curl -s 'https://api.tailscale.com/api/v2/tailnet/-/keys' \
         --request POST \
         --header 'Content-Type: application/json' \
@@ -93,7 +95,7 @@ full:
                 "ephemeral": true, \
                 "preauthorized": true, \
                 "tags": [ \
-                    "tag:test-devices" \
+                    "{{tag_name}}" \
                 ] \
             } } } \
         }' | jq
