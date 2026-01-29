@@ -33,3 +33,4 @@ AMENT_IGNORE
 .envrc
 .env
 
+fast.xml

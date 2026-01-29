@@ -15,17 +15,16 @@ will install them if they are not found.
 create a tailscale oauth app to get a client ID and secret: 
 https://tailscale.com/kb/1215/oauth-clients
 
-Then, create a tag for the devices to use. This repo uses `tag:test-devices`.
-
-TODO: when done developing, change tag to `tag:ros-devices`
+Then, create a tag for the devices to use. This repo uses `tag:ros-devices`.
 
 ### configure env vars
-set up these environment variables: (or use direnv or similar)
 
-#### nixos
+<details>
+<summary>for nixos</summary>
 use direnv. put the content below into `.envrc` and add `use flake` to the top of the file.
+</details>
 
-#### other linux
+set up these environment variables: (or use direnv or similar)
 
 set the following variables:
 
@@ -35,7 +34,8 @@ export OAUTH_CLIENT_ID=
 export OAUTH_CLIENT_SECRET=
 
 # the name of the tailscale tag to use
-export TAILSCALE_TAG_NAME="tag:test-devices"
+# required for starting tailscale
+export TAILSCALE_TAG_NAME="tag:ros-devices"
 
 # choose a domain id. must be the same across devices
 export ROS_DOMAIN_ID=14
@@ -56,9 +56,13 @@ export FASTRTPS_DEFAULT_PROFILES_FILE=$(pwd)/fast.xml
 in `./fast.xml`, add in all the (subscriber) ip/hostnames.
 this is necessary for the publisher to talk to the subscriber.
 
+see `./fast.example.xml` for an example.
+
 The subscribers do not need to have this configured, only the publishers.
 
 You can do this automatically with `./launch.sh generate-fast-xml --write fast.xml`
+
+If you set `TAILSCALE_TAG_NAME`, the generated file will only include devices with that tag.
 
 ### set up tailscale
 
@@ -74,15 +78,14 @@ using a tag to ensure the device persists.
 
 these are the standard steps.
 
-#### nixos
-
+<details>
+<summary>for nixos</summary>
 the `flake.nix` sets everything up.
 
 build the ros2 package with `colcon build --symlink-install`
 
 run `source install/setup.zsh`, run `nix develop`, or use direnv to automatically enter the shell.
-
-#### other linux
+</details>
 
 install ros2 humble
 
