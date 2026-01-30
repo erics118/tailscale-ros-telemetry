@@ -5,7 +5,7 @@
 oauth_client_id := env('TAILSCALE_OAUTH_CLIENT_ID')
 oauth_client_secret := env('TAILSCALE_OAUTH_CLIENT_SECRET')
 
-env_tag_name := env('TAILSCALE_TAG_NAME', 'tag:ros-devices')
+env_tag_name := env('TAILSCALE_TAG_NAME')
 
 # optional api key. if not specified, must be provided as arg to relevant recipes
 env_api_key := env('TAILSCALE_API_KEY', '')
@@ -39,9 +39,6 @@ full tag_name=env_tag_name:
     && TAILSCALE_AUTH_KEY=$(just generate-auth-key {{tag_name}} $TAILSCALE_API_KEY | jq -r '.key') \
     && echo $TAILSCALE_AUTH_KEY \
     && sudo tailscale up --reset --auth-key=$TAILSCALE_AUTH_KEY --hostname="$(hostname)"
-
-[group("tailscale")]
-    sudo tailscale up --authkey=
 
 # generates an api key
 [group("client")]
