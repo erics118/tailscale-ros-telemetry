@@ -12,24 +12,40 @@ fi
 check_dependencies() {
     # install deps only on ubuntu
     if [ -f /etc/os-release ] && grep -qi ubuntu /etc/os-release; then
-        # install necessary dependencies
+        local needs_update=false
+        local packages_to_install=()
+
+        # check which packages need to be installed
         if ! command -v curl &> /dev/null; then
-            echo "'curl' not found. Installing..." >&2
-            $SUDO apt-get update && $SUDO apt-get install -y curl || exit 1
+            echo "'curl' not found. Will install..." >&2
+            packages_to_install+=(curl)
+            needs_update=true
         fi
 
         if ! command -v jq &> /dev/null; then
-            echo "'jq' not found. Installing..." >&2
-            $SUDO apt-get update && $SUDO apt-get install -y jq || exit 1
+            echo "'jq' not found. Will install..." >&2
+            packages_to_install+=(jq)
+            needs_update=true
         fi
 
+        # rmw-fastrtps-cpp is installed by default, but we need the dynamic version
+        if ! dpkg -l ros-humble-rmw-fastrtps-dynamic-cpp 2>/dev/null | grep -q '^ii'; then
+            echo "'ros-humble-rmw-fastrtps-dynamic-cpp' not found. Will install..." >&2
+            packages_to_install+=(ros-humble-rmw-fastrtps-dynamic-cpp)
+            needs_update=true
+        fi
+
+        # install apt packages in one go
+        if [ "$needs_update" = true ]; then
+            $SUDO apt-get update || exit 1
+            $SUDO apt-get install -y "${packages_to_install[@]}" || exit 1
+        fi
+
+        # tailscale uses its own installer
         if ! command -v tailscale &> /dev/null; then
             echo "'tailscale' not found. Installing..." >&2
             curl -fsSL https://tailscale.com/install.sh | sh || exit 1
         fi
-
-        # rmw-fastrtps-cpp is installed by default, but we need the dynamic version
-        $SUDO apt-get install -y ros-humble-rmw-fastrtps-dynamic-cpp
     fi
 }
 
@@ -64,7 +80,7 @@ generate_auth_key() {
 }
 
 start() {
-    # make sure the env vars are set[]
+    # make sure the env vars are set
     if [ -z "${TAILSCALE_OAUTH_CLIENT_ID:-}" ] || [ -z "${TAILSCALE_OAUTH_CLIENT_SECRET:-}" ]; then
         echo "ensure TAILSCALE_OAUTH_CLIENT_ID and TAILSCALE_OAUTH_CLIENT_SECRET environment variables are set" >&2
         exit 1
@@ -151,12 +167,12 @@ generate_fast_xml() {
             | .[]')
     else
         echo "filtering devices by tag: ${TAILSCALE_TAG_NAME}" >&2
-        hostnames=$(echo "$status_json" | jq -r '
+        hostnames=$(echo "$status_json" | jq -r --arg tag "$TAILSCALE_TAG_NAME" '
             ([.Self.HostName] +
             ((.Peer // {})
                 | to_entries
                 | map(.value
-                    | select((.Tags // []) | index("'"${TAILSCALE_TAG_NAME}"'"))
+                    | select((.Tags // []) | index($tag))
                     | .HostName)))
             | map(ascii_downcase)
             | unique
@@ -270,7 +286,12 @@ fi
 
 case "${cmd}" in
     start)
-        # if tailscale is running, error out
+        # check if tailscaled daemon is running
+        if ! pgrep -x tailscaled &> /dev/null; then
+            echo "error: tailscaled daemon is not running" >&2
+            exit 1
+        fi
+        # if tailscale is already connected, error out
         if tailscale status &> /dev/null; then
             echo "error: tailscale is already running" >&2
             exit 1
