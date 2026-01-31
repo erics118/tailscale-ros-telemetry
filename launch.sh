@@ -11,7 +11,8 @@ fi
 
 check_dependencies() {
     # install deps only on ubuntu
-    if [ -f /etc/os-release ] && grep -qi ubuntu /etc/os-release; then
+    if [ -f /etc/os-release ] && . /etc/os-release && ([ "$ID" = "debian" ] || [ "$ID" = "ubuntu" ]); then
+        echo "Running on Debian or Ubuntu"
         local needs_update=false
         local packages_to_install=()
 
@@ -29,7 +30,7 @@ check_dependencies() {
         fi
 
         # rmw-fastrtps-cpp is installed by default, but we need the dynamic version
-        if ! dpkg -l ros-humble-rmw-fastrtps-dynamic-cpp 2>/dev/null | grep -q '^ii'; then
+        if ! dpkg -l ros-humble-rmw-fastrtps-dynamic-cpp 2> /dev/null | grep -q '^ii'; then
             echo "'ros-humble-rmw-fastrtps-dynamic-cpp' not found. Will install..." >&2
             packages_to_install+=(ros-humble-rmw-fastrtps-dynamic-cpp)
             needs_update=true
